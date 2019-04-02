@@ -161,6 +161,9 @@ export class TestServer {
 				rej(new Error(`failed to start, ${err.message}`));
 			};
 			this.child.once("error", onError);
+			this.child.stderr!.on("data", async (chunk) => {
+				await onError(new Error(chunk));
+			});
 
 			// Block until the server is ready for connections.
 			const onData = (data: string): void => {
