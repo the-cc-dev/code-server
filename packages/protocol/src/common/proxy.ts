@@ -61,16 +61,32 @@ export abstract class ClientProxy<T extends ServerProxy> extends EventEmitter {
 		return this._proxy;
 	}
 
+	/**
+	 * Initialize the proxy by unpromisifying if necessary and binding to its
+	 * events.
+	 */
 	protected initialize(proxyPromise: Promise<T> | T): void {
 		this._proxy = isPromise(proxyPromise) ? unpromisify(proxyPromise) : proxyPromise;
 		if (this.bindEvents) {
-			this.proxy.onEvent((event, ...args): void => {
+			this.catch(this.proxy.onEvent((event, ...args): void => {
 				this.emit(event, ...args);
-			});
+			}));
 		}
 	}
 
+	/**
+	 * Perform necessary cleanup on disconnect (or reconnect).
+	 */
 	protected abstract handleDisconnect(): void;
+
+	/**
+	 * Emit an error event if the promise errors.
+	 */
+	protected catch(promise: Promise<any>): this {
+		promise.catch((e) => this.emit("error", e));
+
+		return this;
+	}
 }
 
 /**

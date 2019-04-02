@@ -6,11 +6,19 @@ import { ClientProxy } from "../../common/proxy";
 import { ChildProcessModuleProxy, ChildProcessProxy, ChildProcessProxies } from "../../node/modules/child_process";
 import { Readable, Writable } from "./stream";
 
+// tslint:disable completed-docs
+
 export class ChildProcess extends ClientProxy<ChildProcessProxy> implements cp.ChildProcess {
 	public readonly stdin: stream.Writable;
 	public readonly stdout: stream.Readable;
 	public readonly stderr: stream.Readable;
-	public readonly stdio: [stream.Writable, stream.Readable, stream.Readable];
+	public readonly stdio: [
+		stream.Writable | null,
+		stream.Readable | null,
+		stream.Readable | null,
+		stream.Readable | stream.Writable | null | undefined,
+		stream.Readable | stream.Writable | null | undefined
+	];
 
 	private _connected: boolean = false;
 	private _killed: boolean = false;
@@ -21,12 +29,12 @@ export class ChildProcess extends ClientProxy<ChildProcessProxy> implements cp.C
 		this.stdin = new Writable(proxyPromises.then((p) => p.stdin!));
 		this.stdout = new Readable(proxyPromises.then((p) => p.stdout!));
 		this.stderr = new Readable(proxyPromises.then((p) => p.stderr!));
-		this.stdio = [this.stdin, this.stdout, this.stderr];
+		this.stdio = [this.stdin, this.stdout, this.stderr, undefined, undefined];
 
-		this.proxy.getPid().then((pid) => {
+		this.catch(this.proxy.getPid().then((pid) => {
 			this._pid = pid;
 			this._connected = true;
-		});
+		}));
 		this.on("disconnect", () => this._connected = false);
 		this.on("exit", () => {
 			this._connected = false;
@@ -48,19 +56,19 @@ export class ChildProcess extends ClientProxy<ChildProcessProxy> implements cp.C
 
 	public kill(): void {
 		this._killed = true;
-		this.proxy.kill();
+		this.catch(this.proxy.kill());
 	}
 
 	public disconnect(): void {
-		this.proxy.disconnect();
+		this.catch(this.proxy.disconnect());
 	}
 
 	public ref(): void {
-		this.proxy.ref();
+		this.catch(this.proxy.ref());
 	}
 
 	public unref(): void {
-		this.proxy.unref();
+		this.catch(this.proxy.unref());
 	}
 
 	public send(
@@ -88,6 +96,9 @@ export class ChildProcess extends ClientProxy<ChildProcessProxy> implements cp.C
 		return true; // Always true since we can't get this synchronously.
 	}
 
+	/**
+	 * Exit and close the process when disconnected.
+	 */
 	protected handleDisconnect(): void {
 		this.emit("exit", 1);
 		this.emit("close");

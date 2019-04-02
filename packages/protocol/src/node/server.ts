@@ -96,7 +96,7 @@ export class Server {
 		initMsg.setHomeDirectory(os.homedir());
 		initMsg.setTmpDirectory(os.tmpdir());
 		initMsg.setOperatingSystem(platformToProto(os.platform()));
-		initMsg.setShell(os.userInfo().shell || global.process.env.SHELL);
+		initMsg.setShell(os.userInfo().shell || global.process.env.SHELL || "");
 		const srvMsg = new ServerMessage();
 		srvMsg.setInit(initMsg);
 		connection.send(srvMsg.serializeBinary());
